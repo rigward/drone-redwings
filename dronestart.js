@@ -2,6 +2,7 @@ var fs = require('fs');
 // HTTP module
 var http = require('http'),
     Drone = require('ar-drone'),
+    arDroneConstants = require('ar-drone/lib/constants'),
     path = require('path'),
     ext = require('extension'),
     client = Drone.createClient();
@@ -9,7 +10,7 @@ var http = require('http'),
 
 var socketClient = null;
 var store = Array();
-var COMMAND_TIMEOUT_VALUE = 50;
+var COMMAND_TIMEOUT_VALUE = 500;
 var droneLevel = 0;
 var RunDanceCommand = function (data) {
     if (data.z) {
@@ -24,10 +25,11 @@ var RunDanceCommand = function (data) {
         if (droneLevel > -5) {
             client.down(0.1);
             droneLevel--;
-        } /*else {
-            client.up(1);
-            droneLevel++;
-        }*/
+        }
+        /*else {
+         client.up(1);
+         droneLevel++;
+         }*/
     }
 }
 
@@ -120,7 +122,18 @@ server.listen(8080);
 
 console.log('Server started on port 8080');
 var io = require('socket.io').listen(server);
-//client.on('navdata', console.log);
+
+client.on('navdata', function (d) {
+    console.log(d);
+    if (d.demo) {
+        console.log("DEMO:");
+        console.log(d.demo);
+        if (d.demo.altitude) {
+            console.log("ALT");
+            console.log(d.demo.altitude);
+        }
+    }
+});
 
 var getAverage = function (elmt) {
     var sum = 0;
