@@ -1,132 +1,68 @@
-/**
- * Created by Rigward on 29-May-15.
- */
-(function () {
+var viz;
+var song;
+window.onload=function(){
+    viz = false;
+    var button = document.getElementById('playButton');
+    //button.onclick = mousePressed();
+};
 
-    // vars
-    var device,
-        osc,
-        lfo1,
-        lfo2,
-        lfo3,
-        lfo4,
-        fft,
-        fps = 30,
-        channelCount = 2,
-        width,
-        height,
-        context,
-        playing = false;
+function preload(){
+    song = loadSound('1.mp3');
+}
+function setup() {
+    /*amplitude = new p5.Amplitude();
+    var best = song.getPeaks(100);
+    createCanvas(720, 200);
+    background(255,0,0);*/
+    createCanvas(1000,1000);
+    song.play();
+    fft = new p5.FFT();
+}
 
-    // This is the function that actually fills the
-    // audio buffer with samples. In this case it
-    // does crazy stuff with LFO's to produce
-    // some interesting samples for the FFT.
-    function audioCallback (buffer, channels) {
+function mousePressed() {
+    viz = !viz;
+    if ( song.isPlaying() ) { // .isPlaying() returns a boolean
+        song.stop();
+        background(255,0,0);
+    } else {
+        song.play();
+        background(0,255,0);
+    }
+}
+/*function draw() {
+    background(0);
+    fill(255);
+    var level = amplitude.getLevel();
+    console.log(level);
+    var size = map(level, 0, 1, 0, 200);
+    ellipse(width/2, height/2, size, size);
+}*/
 
-        if (!playing) return;
+function draw(){
+    background(0);
 
-        var i, n, sample, bufferLength = buffer.length;
-
-        for (i = 0; i < bufferLength; i += channels) {
-
-            lfo1.generate();
-            lfo2.generate();
-            lfo3.generate();
-            lfo4.generate();
-
-            lfo2.fm = lfo1.getMix();
-            lfo3.fm = lfo2.getMix();
-            lfo4.fm = lfo3.getMix();
-
-            osc.fm = lfo4.getMix();
-            osc.generate();
-
-            sample = osc.getMix();
-
-            fft.pushSample(sample);
-
-            for (n = 0; n < channelCount; n++){
-                buffer[i + n] = sample;
-            }
-        }
+    var spectrum = fft.analyze();
+    noStroke();
+    fill(0,255,0); // spectrum is green
+    for (var i = 0; i< spectrum.length; i++){
+        var x = map(i, 0, spectrum.length, 0, width);
+        var h = -height + map(spectrum[i], 0, 255, height, 0);
+        rect(x, height, width / spectrum.length, h )
     }
 
-    window.addEventListener('load', function() {
-
-        var canvas, button;
-
-        // set up audio device and oscillators
-        device = audioLib.AudioDevice(audioCallback, channelCount);
-        osc = audioLib.Oscillator(device.sampleRate, 600);
-        osc.waveShape = 'triangle';
-        lfo1 = audioLib.Oscillator(device.sampleRate, 0.1);
-        lfo2 = audioLib.Oscillator(device.sampleRate, 10.3);
-        lfo3 = audioLib.Oscillator(device.sampleRate, 0.7);
-        lfo4 = audioLib.Oscillator(device.sampleRate, 6.2);
-
-        // create the FFT
-        fft = audioLib.FFT(device.sampleRate, 4096);
-
-        // set up UI and FFT canvas
-        canvas = document.getElementById('canvas');
-        context = canvas.getContext('2d');
-        width = canvas.width;
-        height = canvas.height;
-        gradient = context.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, "#ff0000");
-        gradient.addColorStop(0.6, "#ff0000");
-        gradient.addColorStop(1, "#0000ff");
-        context.fillStyle = gradient;
-        context.lineWidth = 1;
-
-        button = document.getElementById('playButton');
-        button.onclick = function () {
-            playing = !playing;
-            button.innerHTML = playing ? 'pause' : 'play';
-        };
-
-    });
-
-    // This function actually draws the FFT spectrum
-    // on the HTML5 canvas.
-    function drawFFT () {
-
-        var length, count;
-        length = fft.spectrum.length / 8;
-
-        context.clearRect(0, 0, width, height);
-        context.beginPath();
-        context.moveTo(0, height);
-
-        for (count = 0; count < length; count++) {
-            context.lineTo(count / length * width,
-                fft.spectrum[count] * -height * 2 + height);
-        }
-
-        context.moveTo(width,0);
-        context.closePath();
-        context.fill();
-        context.stroke();
+    var waveform = fft.waveform();
+    noFill();
+    beginShape();
+    stroke(255,0,0); // waveform is red
+    strokeWeight(1);
+    for (var i = 0; i< waveform.length; i++){
+        var x = map(i, 0, waveform.length, 0, width);
+        var y = map( waveform[i], 0, 255, 0, height);
+        vertex(x,y);
+    }
+    endShape();
     }
 
-    function drawFFT2 () {
-
-        var length, count;
-        length = fft.spectrum.length / 8;
-        var sum = 0;
-        for (count = 0; count < length; count++) {
-            sum+=fft.spectrum[count];
-        }
-        sum = sum/length;
-        console.log(sum);
-
-    }
-
-    // Use sink.js (built in to audiolib.js) to
-    // call drawFFT at the given frame rate.
-    Sink.doInterval(function(){
-        if (playing) drawFFT();
-    }, fps/100);
-
-})();
+while(true) {
+    draw();
+}
