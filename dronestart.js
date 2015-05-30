@@ -6,21 +6,47 @@ var http = require('http'),
     ext = require('extension'),
     client = Drone.createClient();
 
+
 var socketClient = null;
 var store = Array();
-var COMMAND_TIMEOUT_VALUE = 200;
+var COMMAND_TIMEOUT_VALUE = 50;
+var droneLevel = 0;
+var RunDanceCommand = function (data) {
+    if (data.z) {
+        if (droneLevel < 5) {
+            client.up(1);
+            client.up(1);
+            client.up(1);
+            droneLevel++;
+        }
+    }
+    else {
+        if (droneLevel > -5) {
+            client.down(0.1);
+            droneLevel--;
+        } /*else {
+            client.up(1);
+            droneLevel++;
+        }*/
+    }
+}
 
 var CommandsDanceClass = function () {
     this.stack = [];
     this.intervalKey;
 
     this.push = function (data) {
-        if (data.x) {
-
+        if (data.z) {
+            this.stack.push(function () {
+                client.up(1);
+            })
         }
-        this.stack.push(function () {
-            client.up(1);
-        })
+        else {
+            this.stack.push(function () {
+                client.down(1);
+            })
+        }
+
     }
     this.pop = function () {
         if (this.stack.length) {
@@ -41,7 +67,7 @@ var CommandsDanceClass = function () {
         if (typeof command == 'function') {
             command();
         } else {
-            this.clear();
+            that.clear();
         }
 
     }, COMMAND_TIMEOUT_VALUE)
@@ -94,7 +120,7 @@ server.listen(8080);
 
 console.log('Server started on port 8080');
 var io = require('socket.io').listen(server);
-client.on('navdata', console.log);
+//client.on('navdata', console.log);
 
 var getAverage = function (elmt) {
     var sum = 0;
@@ -115,9 +141,19 @@ io.sockets.on('connection',
         if (socketClient) {
             return;
         }
-        var CommandsDance = new CommandsDanceClass();
+        //var CommandsDance = new CommandsDanceClass();
 
         socketClient = socket.id;
+
+        client.createRepl();
+        client.disableEmergency();
+        client.config('control:control_vz_max', '2000', function () {
+            console.log('here');
+        });
+        client.config('control:altitude_max', '1700', function () {
+            console.log('here');
+        });
+
         client.takeoff();
         console.log("New drone controller: " + socket.id);
 
@@ -139,13 +175,24 @@ io.sockets.on('connection',
 
                     break;
                 case 'land':
+                    console.log('Client land');
+                    client.land();
                     break;
                 case 'takeoff':
                     break;
+                case 'stop':
+                    console.log('Client stop');
+                    //client.stop();
+                    client.land();
+                    break;
             }
         });
+        var prevData = undefined;
 
         setInterval(function (e) {
+            //if (!store.length) {
+            //    return;
+            //}
             var current = store;
             store = [];
             var data = (function (current) {
@@ -168,11 +215,12 @@ io.sockets.on('connection',
                 return {
                     x: getAverage(x) > 200,
                     y: getAverage(y) > 200,
-                    z: getAverage(z) > 200
+                    z: getAverage(z) > 150
                 }
             })(current);
             console.log(data);
-            CommandsDance.push(data)
+            RunDanceCommand(data);
+            //CommandsDance.push(data)
 
         }, COMMAND_TIMEOUT_VALUE);
 

@@ -15,7 +15,7 @@ var p;
 
 function preload() {
     //soundFormats('mp3', 'ogg');
-    soundFile = loadSound('files/4.mp3');
+    soundFile = loadSound('files/3.mp3');
 }
 
 function setup() {
@@ -35,6 +35,9 @@ function setup() {
 }
 
 function draw() {
+    if (!soundFile.isPlaying()) {
+        return;
+    }
     background(30, 20, 30);
     updateDescription();
 
@@ -73,11 +76,14 @@ function draw() {
     }
 }
 
-function keyPressed() {
-    if (soundFile.isPlaying()) {
-        soundFile.pause();
-    } else {
-        soundFile.play();
+function keyPressed(e) {
+    if (e.keyCode == 32) {
+        if (soundFile.isPlaying()) {
+            soundFile.pause();
+            socket.emit('voice', 'stop');
+        } else {
+            soundFile.play();
+        }
     }
 }
 
@@ -105,4 +111,8 @@ function updateDescription() {
         }
         p.html(description);
     }
+}
+
+function DroneLand() {
+    socket.emit('voice', 'land');
 }
