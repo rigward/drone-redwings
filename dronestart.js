@@ -2,7 +2,7 @@ var fs = require('fs');
 // HTTP module
 var http = require('http');
 var Drone = require('ar-drone'),
-    //p5 = require('p5'),
+//p5 = require('p5'),
     client = Drone.createClient();
 
 var http = require('http');
@@ -61,27 +61,13 @@ var io = require('socket.io').listen(server);
 io.sockets.on('connection',
     function (socket) {
         console.log("We have a new client: " + socket.id);
-        socket.on('disconnect', function() {
+        socket.on('disconnect', function () {
             console.log("Client has disconnected");
+        });
+        socket.on('mouse', function (data) {
+            console.log(data);
         });
     }
 );
-
-
-
-function setup() {
-    socket = io.connect('http://localhost');
-    // We make a named event called 'mouse' and write an
-    // anonymous callback function
-    socket.on('mouse',
-        function(data) {
-            // Draw a blue circle
-            fill(0,0,255);
-            noStroke();
-            ellipse(data.x,data.y,80,80);
-        }
-    );
-}
-
 
 //client.createRepl();
