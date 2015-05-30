@@ -4,8 +4,9 @@
  * and getEnergy().
  *
  * This example divides the frequency spectrum into eight bands.
- */
 
+ */
+var FREQUENCY = 3;
 var soundFile;
 var fft;
 var socket;
@@ -40,7 +41,7 @@ function draw() {
     fft.analyze(); // analyze before calling fft.getEnergy()
 
     // Generate 8 bars to represent 8 different frequency ranges
-    for (var i = 0; i < 8; i++) {
+    for (var i = 0; i < FREQUENCY; i++) {
         noStroke();
         fill((i * 30) % 100 + 50, 195, (i * 25 + 50) % 255)
 
@@ -52,15 +53,23 @@ function draw() {
         // get the average value in a frequency range
         var freqValue = fft.getEnergy(loFreq, hiFreq - 1);
 
-        socket.emit('mouse', freqValue);
-
-
         // Rectangle height represents the average value of this frequency range
         var h = -height + map(freqValue, 0, 255, height, 0);
-        console.log(h);
-        rect((i + 1) * width / 8 - width / 8, height, width / 8, h);
+
+        console.log(h + height, h + height > height / 2);
+
+        socket.emit('mouse', {
+            t: i,
+            //f: freqValue,
+            f: h + height
+            //c: centerFreq,
+            //l: loFreq,
+            //h: hiFreq,
+            //g: h + height > height / 2
+        });
+        rect((i + 1) * width / FREQUENCY - width / FREQUENCY, height, width / FREQUENCY, h);
         stroke(255);
-        text(loFreq.toFixed(0) + ' Hz - ' + hiFreq.toFixed(0) + ' Hz', (i + 1) * width / 8 - width / 8 / 2, 30);
+        text(loFreq.toFixed(0) + ' Hz - ' + hiFreq.toFixed(0) + ' Hz', (i + 1) * width / FREQUENCY - width / FREQUENCY / 2, 30);
     }
 }
 
