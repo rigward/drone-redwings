@@ -14,7 +14,7 @@ var p;
 
 function preload() {
     //soundFormats('mp3', 'ogg');
-    soundFile = loadSound('files/3.mp3');
+    soundFile = loadSound('files/4.mp3');
 }
 
 function setup() {
@@ -51,9 +51,13 @@ function draw() {
 
         // get the average value in a frequency range
         var freqValue = fft.getEnergy(loFreq, hiFreq - 1);
+
         socket.emit('mouse', freqValue);
+
+
         // Rectangle height represents the average value of this frequency range
         var h = -height + map(freqValue, 0, 255, height, 0);
+        console.log(h);
         rect((i + 1) * width / 8 - width / 8, height, width / 8, h);
         stroke(255);
         text(loFreq.toFixed(0) + ' Hz - ' + hiFreq.toFixed(0) + ' Hz', (i + 1) * width / 8 - width / 8 / 2, 30);
