@@ -5,84 +5,51 @@ var http = require('http'),
     arDroneConstants = require('ar-drone/lib/constants'),
     path = require('path'),
     ext = require('extension'),
-    client = Drone.createClient();
-
+    client = Drone.createClient(),
+    MIN_HEIGHT = 0.7,
+    MAX_HEIGHT = 3,
+    GLOBAL_ALTITUDE = 0,
+    BAR_HEIGHT = 400,
+    READY_TO_FLY = false;
 
 var socketClient = null;
 var store = Array();
-var COMMAND_TIMEOUT_VALUE = 500;
-var droneLevel = 0;
+var COMMAND_TIMEOUT_VALUE = 200;
+var DanceFlag = true;
 var RunDanceCommand = function (data) {
-    if (data.z) {
-        if (droneLevel < 5) {
-            client.up(1);
-            client.up(1);
-            client.up(1);
-            droneLevel++;
-        }
-    }
-    else {
-        if (droneLevel > -5) {
-            client.down(0.1);
-            droneLevel--;
-        }
-        /*else {
-         client.up(1);
-         droneLevel++;
-         }*/
-    }
-}
-
-var CommandsDanceClass = function () {
-    this.stack = [];
-    this.intervalKey;
-
-    this.push = function (data) {
-        if (data.z) {
-            this.stack.push(function () {
-                client.up(1);
-            })
+    if (READY_TO_FLY){
+        if (data.z > 0) {
+            client.up(data.z);
         }
         else {
-            this.stack.push(function () {
-                client.down(1);
-            })
-        }
-
-    }
-    this.pop = function () {
-        if (this.stack.length) {
-            return this.stack.shift()
-        } else {
-            return null;
+            client.down(Math.abs(data.z));
         }
     }
-    this.clear = function () {
-        if (this.intervalKey) {
-            clearInterval(this.intervalKey);
-        }
-    }
-    var that = this;
-    this.intervalKey = setInterval(function () {
+}
+function ConfigureDrone(){
+    client.createRepl();
+    client.disableEmergency();
+    client.ftrim();
+    client.config('control:control_vz_max', '1000', function () {
+        console.log('vertical speed is successfully set');
+    });
+    client.config('control:altitude_max', '2700', function () {
+        console.log('max attitude is successfully set');
+    });
+}
 
-        var command = that.pop();
-        if (typeof command == 'function') {
-            command();
-        } else {
-            that.clear();
-        }
-
-    }, COMMAND_TIMEOUT_VALUE)
-};
+function StartPerfomance(){
+    client.takeoff();
+    setTimeout(function(){
+        READY_TO_FLY = true;
+    }, 5000);
+}
 
 // This function handles an incoming "request"
 // And sends back out a "response";
-
-
 function handleRequest(req, res) {
     // What did we request?
     var pathname = req.url;
-
     // If blank let's ask for index.html
     if (pathname == '/') {
         pathname = '/index.html';
@@ -124,13 +91,10 @@ console.log('Server started on port 8080');
 var io = require('socket.io').listen(server);
 
 client.on('navdata', function (d) {
-    console.log(d);
     if (d.demo) {
-        console.log("DEMO:");
-        console.log(d.demo);
         if (d.demo.altitude) {
-            console.log("ALT");
-            console.log(d.demo.altitude);
+            console.log("ALT: " + d.demo.altitude);
+            GLOBAL_ALTITUDE = d.demo.altitude;
         }
     }
 });
@@ -142,11 +106,26 @@ var getAverage = function (elmt) {
     }
     return Math.round(sum * 1000 / elmt.length) / 1000;
 };
+var getMax = function (elmt) {
+    var m = 0;
+    for (var i = 0; i < elmt.length; i++) {
+        m = Math.max(parseInt(elmt[i], 10), m); //don't forget to add the base
+    }
+    return m;
+}
 
 
-var pushDanceCommand = function (data) {
-
-};
+function CalculateDirection(SoundPower) {
+    //console.log(MAX_HEIGHT, MIN_HEIGHT, BAR_HEIGHT, SoundPower);
+    var TargetAltitude = ((MAX_HEIGHT - MIN_HEIGHT) / BAR_HEIGHT) * SoundPower + MIN_HEIGHT,
+        Difference = TargetAltitude - GLOBAL_ALTITUDE,
+        NormalizedAttitude = 2 / MAX_HEIGHT;
+    if (Difference < 0) {
+        NormalizedAttitude *= -1;
+    }
+    console.log('Difference: ' + Difference + ', Speed: ' + NormalizedAttitude);
+    return NormalizedAttitude;
+}
 
 io.sockets.on('connection',
     function (socket) {
@@ -158,16 +137,8 @@ io.sockets.on('connection',
 
         socketClient = socket.id;
 
-        client.createRepl();
-        client.disableEmergency();
-        client.config('control:control_vz_max', '2000', function () {
-            console.log('here');
-        });
-        client.config('control:altitude_max', '1700', function () {
-            console.log('here');
-        });
+        ConfigureDrone();
 
-        client.takeoff();
         console.log("New drone controller: " + socket.id);
 
         socket.on('disconnect', function () {
@@ -179,33 +150,31 @@ io.sockets.on('connection',
 
         socket.on('mouse', function (data) {
             store.push(data);
-            //console.log(data.t, Math.round(data.f * 1000) / 1000, data.c, data.l, data.h);
         });
 
         socket.on('voice', function (command) {
             switch (command) {
                 case 'dance':
+                    console.log('Client dance');
 
                     break;
                 case 'land':
                     console.log('Client land');
                     client.land();
+                    READY_TO_FLY = false;
                     break;
-                case 'takeoff':
+                case 'perfom':
+                    StartPerfomance();
                     break;
                 case 'stop':
+
                     console.log('Client stop');
-                    //client.stop();
-                    client.land();
+                    client.stop();
                     break;
             }
         });
-        var prevData = undefined;
 
         setInterval(function (e) {
-            //if (!store.length) {
-            //    return;
-            //}
             var current = store;
             store = [];
             var data = (function (current) {
@@ -226,13 +195,17 @@ io.sockets.on('connection',
                     }
                 });
                 return {
-                    x: getAverage(x) > 200,
-                    y: getAverage(y) > 200,
-                    z: getAverage(z) > 150
+                    //x: CalculateDirection(getAverage(x)),
+                    //y: CalculateDirection(getAverage(y)),
+                    z: CalculateDirection(getMax(z))
                 }
             })(current);
-            console.log(data);
-            RunDanceCommand(data);
+
+            if (DanceFlag) {
+                console.log(data);
+                RunDanceCommand(data);
+            }
+
             //CommandsDance.push(data)
 
         }, COMMAND_TIMEOUT_VALUE);

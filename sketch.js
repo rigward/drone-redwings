@@ -15,36 +15,35 @@ var p;
 
 function preload() {
     //soundFormats('mp3', 'ogg');
-    soundFile = loadSound('files/3.mp3');
+    soundFile = loadSound('files/beat.mp3');
 }
 
 function setup() {
-    soundFile.loop();
-
     createCanvas(1024, 400);
     fill(255, 40, 255);
     noStroke();
     textAlign(CENTER);
-
     fft = new p5.FFT();
-
     p = createP(description);
-
     var p2 = createP('Description: Using getEnergy(low, high) to measure amplitude within a range of frequencies.');
     socket = io.connect('http://localhost');
 }
-
+var SWITCH = true
 function draw() {
     if (!soundFile.isPlaying()) {
         return;
     }
     background(30, 20, 30);
     updateDescription();
+    
 
     fft.analyze(); // analyze before calling fft.getEnergy()
 
     // Generate 8 bars to represent 8 different frequency ranges
     for (var i = 0; i < FREQUENCY; i++) {
+        if (!soundFile.isPlaying()) {
+            return;
+        }
         noStroke();
         fill((i * 30) % 100 + 50, 195, (i * 25 + 50) % 255)
 
@@ -59,7 +58,7 @@ function draw() {
         // Rectangle height represents the average value of this frequency range
         var h = -height + map(freqValue, 0, 255, height, 0);
 
-        console.log(h + height, h + height > height / 2);
+        //console.log(h + height, h + height > height / 2);
 
         socket.emit('mouse', {
             t: i,
@@ -67,7 +66,7 @@ function draw() {
             f: h + height
             //c: centerFreq,
             //l: loFreq,
-            //h: hiFreq,
+            //h: hiFreq
             //g: h + height > height / 2
         });
         rect((i + 1) * width / FREQUENCY - width / FREQUENCY, height, width / FREQUENCY, h);
@@ -82,6 +81,7 @@ function keyPressed(e) {
             soundFile.pause();
             socket.emit('voice', 'stop');
         } else {
+            socket.emit('voice', 'dance');
             soundFile.play();
         }
     }
@@ -115,4 +115,16 @@ function updateDescription() {
 
 function DroneLand() {
     socket.emit('voice', 'land');
+}
+
+function StartPerfomance() {
+    if(!soundFile.isPlaying()){
+    socket.emit('voice', 'perfom');
+    setTimeout(function(){
+        soundFile.loop();}, 7000);
+    }
+}
+function StopPerfomance(){
+    socket.emit('voice', 'land');
+    soundFile.stop();
 }
