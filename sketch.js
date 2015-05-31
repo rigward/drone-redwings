@@ -15,7 +15,7 @@ var p;
 
 function preload() {
     //soundFormats('mp3', 'ogg');
-    soundFile = loadSound('files/beat.mp3');
+    soundFile = loadSound('files/111.mp3');
 }
 
 function setup() {
@@ -35,8 +35,6 @@ function draw() {
     }
     background(30, 20, 30);
     updateDescription();
-    
-
     fft.analyze(); // analyze before calling fft.getEnergy()
 
     // Generate 8 bars to represent 8 different frequency ranges
@@ -73,6 +71,54 @@ function draw() {
         stroke(255);
         text(loFreq.toFixed(0) + ' Hz - ' + hiFreq.toFixed(0) + ' Hz', (i + 1) * width / FREQUENCY - width / FREQUENCY / 2, 30);
     }
+}
+
+
+var getMax = function (elmt) {
+    var m = 0;
+    for (var i = 0; i < elmt.length; i++) {
+        m = Math.max(parseInt(elmt[i], 10), m); //don't forget to add the base
+    }
+    return m;
+};
+function draw2() {
+    if (!soundFile.isPlaying()) {
+        return;
+    }
+    background(30, 20, 30);
+    updateDescription();
+    var waveform = fft.waveform(),
+        energy = getMax(waveform),
+        i = 0;
+    console.log(energy);
+    // Generate 8 bars to represent 8 different frequency ranges
+    noFill();
+    beginShape();
+    stroke(255,0,0); // waveform is red
+    strokeWeight(1);
+    for (var i = 0; i< waveform.length; i++){
+        var x = map(i, 0, waveform.length, 0, width);
+        var y = map( waveform[i], 0, 255, 0, height);
+        vertex(x,y);
+    }
+    endShape();
+    // Each bar has a unique frequency range
+
+
+    // Rectangle height represents the average value of this frequency range
+    var h = -height + map(energy, 0, 255, height, 0);
+
+    //console.log(h + height, h + height > height / 2);
+
+    socket.emit('mouse', {
+        t: i,
+        //f: freqValue,
+        f: h + height
+        //c: centerFreq,
+        //l: loFreq,
+        //h: hiFreq
+        //g: h + height > height / 2
+    });
 }
 
 function keyPressed(e) {
@@ -121,7 +167,7 @@ function StartPerfomance() {
     if(!soundFile.isPlaying()){
     socket.emit('voice', 'perfom');
     setTimeout(function(){
-        soundFile.loop();}, 7000);
+        soundFile.loop();}, 5000);
     }
 }
 function StopPerfomance(){

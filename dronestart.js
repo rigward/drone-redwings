@@ -2,19 +2,18 @@ var fs = require('fs');
 // HTTP module
 var http = require('http'),
     Drone = require('ar-drone'),
-    arDroneConstants = require('ar-drone/lib/constants'),
     path = require('path'),
     ext = require('extension'),
     client = Drone.createClient(),
-    MIN_HEIGHT = 0.7,
-    MAX_HEIGHT = 3,
+    MIN_HEIGHT = 0.5,
+    MAX_HEIGHT = 2.5,
     GLOBAL_ALTITUDE = 0,
     BAR_HEIGHT = 400,
     READY_TO_FLY = false;
 
 var socketClient = null;
 var store = Array();
-var COMMAND_TIMEOUT_VALUE = 200;
+var COMMAND_TIMEOUT_VALUE = 100;
 var DanceFlag = true;
 var RunDanceCommand = function (data) {
     if (READY_TO_FLY){
@@ -25,12 +24,12 @@ var RunDanceCommand = function (data) {
             client.down(Math.abs(data.z));
         }
     }
-}
+};
 function ConfigureDrone(){
     client.createRepl();
-    client.disableEmergency();
     client.ftrim();
-    client.config('control:control_vz_max', '1000', function () {
+    client.disableEmergency();
+    client.config('control:control_vz_max', '800', function () {
         console.log('vertical speed is successfully set');
     });
     client.config('control:altitude_max', '2700', function () {
@@ -42,7 +41,7 @@ function StartPerfomance(){
     client.takeoff();
     setTimeout(function(){
         READY_TO_FLY = true;
-    }, 5000);
+    }, 3000);
 }
 
 // This function handles an incoming "request"
@@ -99,31 +98,45 @@ client.on('navdata', function (d) {
     }
 });
 
-var getAverage = function (elmt) {
-    var sum = 0;
-    for (var i = 0; i < elmt.length; i++) {
-        sum += parseInt(elmt[i], 10); //don't forget to add the base
-    }
-    return Math.round(sum * 1000 / elmt.length) / 1000;
-};
 var getMax = function (elmt) {
     var m = 0;
     for (var i = 0; i < elmt.length; i++) {
         m = Math.max(parseInt(elmt[i], 10), m); //don't forget to add the base
     }
     return m;
+};
+
+var getAverage = function (elmt) {
+    var sum = 0;
+    for (var i = 0; i < elmt.length; i++) {
+        sum += parseInt(elmt[i], 10); //don't forget to add the base
+    }
+    return Math.round(sum * 1000 / elmt.length) / 1000;
+}
+
+function CalculateDirection2(SoundPower) {
+    //console.log(MAX_HEIGHT, MIN_HEIGHT, BAR_HEIGHT, SoundPower);
+    var TargetAltitude = ((MAX_HEIGHT - MIN_HEIGHT) / BAR_HEIGHT) * SoundPower + MIN_HEIGHT,
+        Difference = TargetAltitude - GLOBAL_ALTITUDE,
+        NormalizedAttitude = Difference/(MAX_HEIGHT-MIN_HEIGHT);
+    console.log('TargetAltitude: '+ TargetAltitude+ ', CurrentAltitude: '+GLOBAL_ALTITUDE +', Difference: ' + Difference + ', Speed: '+ NormalizedAttitude);
+    return NormalizedAttitude;
 }
 
 
 function CalculateDirection(SoundPower) {
-    //console.log(MAX_HEIGHT, MIN_HEIGHT, BAR_HEIGHT, SoundPower);
     var TargetAltitude = ((MAX_HEIGHT - MIN_HEIGHT) / BAR_HEIGHT) * SoundPower + MIN_HEIGHT,
         Difference = TargetAltitude - GLOBAL_ALTITUDE,
-        NormalizedAttitude = 2 / MAX_HEIGHT;
-    if (Difference < 0) {
-        NormalizedAttitude *= -1;
-    }
-    console.log('Difference: ' + Difference + ', Speed: ' + NormalizedAttitude);
+        NormalizedAttitude = Difference/(MAX_HEIGHT-MIN_HEIGHT);
+        if (Math.abs(NormalizedAttitude)<0.5){
+            if(NormalizedAttitude>0){
+                NormalizedAttitude = 0.5;
+            }
+            else{
+                NormalizedAttitude = -0.5;
+            }
+        }
+    console.log('SoundPower: '+ SoundPower +', TargetAltitude: '+ TargetAltitude+ ', CurrentAltitude: '+GLOBAL_ALTITUDE +', Difference: ' + Difference + ', Speed: '+ NormalizedAttitude);
     return NormalizedAttitude;
 }
 

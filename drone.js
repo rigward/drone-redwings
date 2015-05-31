@@ -5,16 +5,16 @@ var Commands = [],
 console.log('started');
 client.createRepl();
 client.disableEmergency();
-client.config('control:control_vz_max', '2000', function(){console.log('here');});
+client.ftrim();
+//client.config('control:control_vz_max', '2000', function(){console.log('here');});
 client.config('control:altitude_max', '1700', function(){console.log('here');});
-client.takeoff();
 
 
 setTimeout(Loop, 3000);
 
 function Loop(){
     console.log('Loop started');
-    EndKey = setInterval(ApplyCommand, 500);
+    EndKey = setInterval(ApplyCommand, 200);
 }
 function ApplyCommand(){
     console.log('Sent command');
