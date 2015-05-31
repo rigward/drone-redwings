@@ -1,4 +1,5 @@
 <head>
+    <link href="style.css" rel="stylesheet">
     <script language="javascript" type="text/javascript" src="socket.io-1.2.0.js"></script>
 
     <script language="javascript" type="text/javascript" src="p5/lib/p5.js"></script>
@@ -13,12 +14,11 @@
     </script>
 </head>
 <body>
-<p>
-    <button onclick="DroneLand()">Drone Land</button>
-    <button onclick="StartPerfomance()">Start Perfomance</button>
-    <button onclick="StopPerfomance()">Stop Perfomance</button>
 
-</p>
-
+<div class="buttons">
+    <button class="controll-btn" onclick="DroneLand()">Drone Land</button>
+    <button class="controll-btn" onclick="StartPerfomance()">Start Perfomance</button>
+    <button class="controll-btn" onclick="StopPerfomance()">Stop Perfomance</button>
+</div>
 
 </body>
