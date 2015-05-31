@@ -15,7 +15,7 @@ var p;
 
 function preload() {
     //soundFormats('mp3', 'ogg');
-    soundFile = loadSound('files/111.mp3');
+    soundFile = loadSound('files/222.mp3');
 }
 
 function setup() {
@@ -28,7 +28,7 @@ function setup() {
     var p2 = createP('Description: Using getEnergy(low, high) to measure amplitude within a range of frequencies.');
     socket = io.connect('http://localhost');
 }
-var SWITCH = true
+
 function draw() {
     if (!soundFile.isPlaying()) {
         return;
@@ -167,7 +167,7 @@ function StartPerfomance() {
     if(!soundFile.isPlaying()){
     socket.emit('voice', 'perfom');
     setTimeout(function(){
-        soundFile.loop();}, 5000);
+        soundFile.loop();}, 2000);
     }
 }
 function StopPerfomance(){

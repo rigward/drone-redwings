@@ -5,23 +5,26 @@ var http = require('http'),
     path = require('path'),
     ext = require('extension'),
     client = Drone.createClient(),
-    MIN_HEIGHT = 0.5,
-    MAX_HEIGHT = 2.5,
+    MIN_HEIGHT = 1,
+    MAX_HEIGHT = 2.7,
     GLOBAL_ALTITUDE = 0,
     BAR_HEIGHT = 400,
     READY_TO_FLY = false;
 
 var socketClient = null;
 var store = Array();
-var COMMAND_TIMEOUT_VALUE = 100;
+var COMMAND_TIMEOUT_VALUE = 50;
 var DanceFlag = true;
 var RunDanceCommand = function (data) {
     if (READY_TO_FLY){
         if (data.z > 0) {
-            client.up(data.z);
+            client.up(data.z+0.15);
+            client.animateLeds('green', 1, 3);
+
         }
         else {
             client.down(Math.abs(data.z));
+            client.animateLeds('red', 1, 3);
         }
     }
 };
@@ -29,15 +32,16 @@ function ConfigureDrone(){
     client.createRepl();
     client.ftrim();
     client.disableEmergency();
-    client.config('control:control_vz_max', '800', function () {
+    client.config('control:control_vz_max', '2000', function () {
         console.log('vertical speed is successfully set');
     });
-    client.config('control:altitude_max', '2700', function () {
+    client.config('control:altitude_max', '2800', function () {
         console.log('max attitude is successfully set');
     });
 }
 
 function StartPerfomance(){
+    client.disableEmergency();
     client.takeoff();
     setTimeout(function(){
         READY_TO_FLY = true;
@@ -128,12 +132,12 @@ function CalculateDirection(SoundPower) {
     var TargetAltitude = ((MAX_HEIGHT - MIN_HEIGHT) / BAR_HEIGHT) * SoundPower + MIN_HEIGHT,
         Difference = TargetAltitude - GLOBAL_ALTITUDE,
         NormalizedAttitude = Difference/(MAX_HEIGHT-MIN_HEIGHT);
-        if (Math.abs(NormalizedAttitude)<0.5){
+        if (Math.abs(NormalizedAttitude)<0.6){
             if(NormalizedAttitude>0){
-                NormalizedAttitude = 0.5;
+                NormalizedAttitude = 0.6;
             }
             else{
-                NormalizedAttitude = -0.5;
+                NormalizedAttitude = -0.6;
             }
         }
     console.log('SoundPower: '+ SoundPower +', TargetAltitude: '+ TargetAltitude+ ', CurrentAltitude: '+GLOBAL_ALTITUDE +', Difference: ' + Difference + ', Speed: '+ NormalizedAttitude);
@@ -210,7 +214,8 @@ io.sockets.on('connection',
                 return {
                     //x: CalculateDirection(getAverage(x)),
                     //y: CalculateDirection(getAverage(y)),
-                    z: CalculateDirection(getMax(z))
+                    z: (CalculateDirection(getAverage(z))+CalculateDirection(getAverage(x))+CalculateDirection(getAverage(y)))/3
+                    //z: CalculateDirection(getMax(y))
                 }
             })(current);
 
